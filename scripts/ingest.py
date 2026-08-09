@@ -2,6 +2,9 @@ import requests
 import feedparser  # easier than manual XML parsing
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 es = Elasticsearch("http://localhost:9200") 
 INDEX_NAME = "papers"
@@ -14,6 +17,12 @@ MAPPING = {
             "authors": {"type": "keyword"},
             "category": {"type": "keyword"},
             "published_date": {"type": "date"},
+            "embedding": {
+                "type": "dense_vector",
+                "dims": 384,
+                "index": True,
+                "similarity": "cosine",
+            },
         }
     }
 }
@@ -77,9 +86,18 @@ def index_papers(papers: list[dict]):
     success, errors = bulk(es, actions)
     print(f"Indexed {success} papers, {len(errors)} errors.")
 
+def add_embeddings(papers: list[dict]) -> list[dict]:
+    texts = [f"{p['title']}. {p['abstract']}" for p in papers]
+    embeddings = model.encode(texts, show_progress_bar=True)
+    for paper, embedding in zip(papers, embeddings):
+        paper["embedding"] = embedding.tolist()
+    return papers
+
 
 if __name__ == "__main__":
     create_index()
     xml_data = fetch_papers(max_results=200)
     papers = parse_papers(xml_data)
+    papers = add_embeddings(papers)
     index_papers(papers)
+    
