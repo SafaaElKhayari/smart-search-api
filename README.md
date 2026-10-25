@@ -66,6 +66,7 @@ Config lives in `observability/`. Set `OTEL_ENABLED=false` to turn it off.
 GET /health check if everything is working
 GET /search normal keyword search
 GET /search/semantic smart search (by meaning)
+GET /search/hybrid both searches combined (Reciprocal Rank Fusion)
 GET /facets see paper counts per category
 
 ### Prerequisites
@@ -104,6 +105,12 @@ Semantic search (finds conceptually related results, even with no shared keyword
 
 \```bash
 curl "http://localhost:8000/search/semantic?q=how+do+machines+learn+representations"
+\```
+
+Hybrid search (merges keyword and semantic rankings; papers found by both rank highest):
+
+\```bash
+curl "http://localhost:8000/search/hybrid?q=LoRA+fine-tuning&category=cs.LG"
 \```
 
 Facets:
