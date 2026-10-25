@@ -39,6 +39,28 @@ requests fast.
 - **Docker** to run everything the same way, anywhere
 - **arXiv** free public source for the papers
 
+## Observability
+
+The API is instrumented with **OpenTelemetry** and ships with a small
+monitoring stack, so you can see what it does in production:
+
+- **Traces**: every request is traced from FastAPI, through the query
+  embedding (`embed_query` span), to the Elasticsearch call. Open
+  Jaeger at http://localhost:16686
+- **Metrics**: request rate, p95 latency and error rate per endpoint,
+  plus product KPIs: searches by type and category, zero-result rate,
+  embedding time. Open Grafana at http://localhost:3000 (dashboard
+  "Smart Search API")
+- **Logs**: every log line carries `trace_id` and `span_id`, so a log
+  can be matched to its trace
+
+How the data flows:
+
+API (OTLP) → OpenTelemetry Collector → Jaeger (traces) and
+Prometheus (metrics) → Grafana
+
+Config lives in `observability/`. Set `OTEL_ENABLED=false` to turn it off.
+
 ## API endpoints
 
 GET /health check if everything is working

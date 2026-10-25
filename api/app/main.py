@@ -1,15 +1,19 @@
+import time
+
 from elasticsearch import ConnectionError as ESConnectionError
 from elasticsearch import ConnectionTimeout, NotFoundError
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 from app.es_client import es
 from app.schemas import PaperResult
+from app.telemetry import embedding_duration, record_search, setup_telemetry, tracer
 from sentence_transformers import SentenceTransformer
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 app = FastAPI(title="Smart Search API")
+setup_telemetry(app)
 
 INDEX_NAME = "papers"
 MAX_SIZE = 50
@@ -72,7 +76,9 @@ def search(
         size=size,
         source_excludes=["embedding"],
     )
-    return to_results(response)
+    results = to_results(response)
+    record_search("keyword", category, len(results))
+    return results
 
 @app.get("/facets")
 def facets():
@@ -87,7 +93,10 @@ def facets():
 
 @app.get("/search/semantic", response_model=list[PaperResult])
 def search_semantic(q: str = Query(...), size: int = Query(10, ge=1, le=MAX_SIZE)):
-    query_vector = model.encode(q).tolist()
+    with tracer.start_as_current_span("embed_query"):
+        start = time.perf_counter()
+        query_vector = model.encode(q).tolist()
+        embedding_duration.record((time.perf_counter() - start) * 1000)
 
     response = es.search(
         index=INDEX_NAME,
@@ -100,4 +109,6 @@ def search_semantic(q: str = Query(...), size: int = Query(10, ge=1, le=MAX_SIZE
         size=size,
         source_excludes=["embedding"],
     )
-    return to_results(response)
+    results = to_results(response)
+    record_search("semantic", None, len(results))
+    return results
