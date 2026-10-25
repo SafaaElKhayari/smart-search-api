@@ -3,3 +3,8 @@ uvicorn[standard]==0.30.1
 elasticsearch==8.13.0
 pydantic-settings==2.3.4
 sentence-transformers==3.0.1
+opentelemetry-api==1.28.0
+opentelemetry-sdk==1.28.0
+opentelemetry-exporter-otlp-proto-grpc==1.28.0
+opentelemetry-instrumentation-fastapi==0.49b0
+opentelemetry-instrumentation-logging==0.49b0
